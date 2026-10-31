@@ -78,7 +78,7 @@ export function siteUrl() {
 // `hash` is the poster's link code (engine.toHash()).
 export function embedCode(hash, aspect) {
   const src = `${siteUrl()}?embed=1#${hash}`;
-  return `<iframe src="${src}" title="Morva visual" loading="lazy" style="width:100%;aspect-ratio:${aspect.toFixed(4)};border:0;display:block" allow="fullscreen"></iframe>`;
+  return `<iframe src="${escapeHtml(src)}" title="Morva visual" loading="lazy" style="width:100%;aspect-ratio:${aspect.toFixed(4)};border:0;display:block" allow="fullscreen"></iframe>`;
 }
 
 // A single .html file with the current settings baked in. It loads the poster code
@@ -86,11 +86,14 @@ export function embedCode(hash, aspect) {
 export async function downloadStandaloneHTML(state) {
   const base = siteUrl();
   let html = await (await fetch(base + 'index.html', { cache: 'no-store' })).text();
-  const settings = JSON.stringify(settingsOf(state)).replace(/</g, '\\u003c');
+  const settings = JSON.stringify(settingsOf(state)).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  // Function replacers, so `$&`-style patterns in the poster's text stay literal.
+  // The site's CSP is dropped: this file runs from the user's own disk with an inline settings script.
   html = html
-    .replace('<head>', `<head>\n  <base href="${base}" />`)
-    .replace('</head>', `  <script>window.POSTER_STATE = ${settings}; window.POSTER_EMBED = true;</script>\n</head>`)
-    .replace(/<title>.*<\/title>/, `<title>${escapeHtml(state.text.lines.title || 'Morva')}</title>`);
+    .replace(/\s*<meta http-equiv="Content-Security-Policy"[^>]*>/, '')
+    .replace('<head>', () => `<head>\n  <base href="${escapeHtml(base)}" />`)
+    .replace('</head>', () => `  <script>window.POSTER_STATE = ${settings}; window.POSTER_EMBED = true;</script>\n</head>`)
+    .replace(/<title>.*<\/title>/, () => `<title>${escapeHtml(state.text.lines.title || 'Morva')}</title>`);
   download(new Blob([html], { type: 'text/html' }), `${stamp(state)}.html`);
 }
 

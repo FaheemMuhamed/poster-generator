@@ -15,7 +15,9 @@ const glslValue = (def, v) => {
   if (def.options) return num(Math.max(0, def.options.indexOf(v)));
   return num(v);
 };
-const jsValue = (v) => (typeof v === 'string' ? JSON.stringify(v) : String(typeof v === 'number' ? Number(v.toPrecision(4)) : v));
+// JSON that is safe inside a <script> block (no closing tag, no JS line separators).
+const safeJSON = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+const jsValue = (v) => (typeof v === 'string' ? safeJSON(v) : String(typeof v === 'number' ? Number(v.toPrecision(4)) : v));
 const pad = (lines, n) => lines.split('\n').map((l) => (l ? ' '.repeat(n) + l : l)).join('\n');
 
 const PAGE_CSS = 'html, body { margin: 0; height: 100%; background: #111; }\ncanvas { display: block; width: 100vw; height: 100vh; }';
@@ -60,8 +62,8 @@ export function p5Sketch({ id, name, values, colors, seed, sketch }) {
 const params = {
 ${Object.entries(values).map(([k, v]) => `  ${k}: ${jsValue(v)},`).join('\n')}
 };
-const colors = ${JSON.stringify(colors).replace(/,"/g, ', "').replace(/":/g, '": ')};
-const SEED = ${seed};
+const colors = ${safeJSON(colors).replace(/,"/g, ', "').replace(/":/g, '": ')};
+const SEED = ${Math.trunc(Number(seed)) || 0};
 
 ${sketch.trim()}`;
   return result({ id, title: `${name} · Morva`, script, external: [P5_CDN] });
@@ -88,8 +90,8 @@ const VERT = \`attribute vec2 pos; varying vec2 vUv;
 void main() { vUv = pos * 0.5 + 0.5; gl_Position = vec4(pos, 0.0, 1.0); }\`;
 
 // Palette: background, ink, then four colours.
-const colors = ${JSON.stringify(['bg', 'ink', 'c1', 'c2', 'c3', 'c4'].map((k) => colors[k]))};
-const SEED = ${seed};
+const colors = ${safeJSON(['bg', 'ink', 'c1', 'c2', 'c3', 'c4'].map((k) => colors[k]))};
+const SEED = ${Math.trunc(Number(seed)) || 0};
 
 const canvas = document.querySelector('canvas');
 const gl = canvas.getContext('webgl', { antialias: false });
@@ -162,8 +164,8 @@ import * as THREE from 'three';
 const params = {
 ${Object.entries(values).map(([k, v]) => `  ${k}: ${jsValue(v)},`).join('\n')}
 };
-const colors = ${JSON.stringify(colors)};
-const SEED = ${seed};
+const colors = ${safeJSON(colors)};
+const SEED = ${Math.trunc(Number(seed)) || 0};
 
 ${sketch.trim()}`;
   return result({ id, title: `${name} · Morva`, head, script, module: true });

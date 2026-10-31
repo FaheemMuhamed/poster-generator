@@ -1,0 +1,33 @@
+# Morva
+
+> Morva is a free, browser-based archive of 37 generative visuals (p5.js, three.js and GLSL) that graphic and visual designers can tweak without code and export as posters, video clips or code.
+
+Website: https://morva-studio.com/
+
+## What it does
+
+- Each visual is a live generative-art technique: noise fields, particle systems, reaction–diffusion, dithering, halftone, Voronoi, kinetic and 3D type, isometric cities and more.
+- Every visual has its own parameters (shape, form, motion), cursor and click interactions, three one-click looks, and a finish layer (grain, bloom, halftone, riso, glitch, pixel).
+- Add a title and text in 53 open-licence typefaces with grid layouts, pick a palette or your own colours, and set the frame: A-series, 4:5, 9:16, 1:1, 16:9 or a custom ratio.
+- Use your own photo or webcam as the source for image-based effects.
+- Export a PNG up to 6K (6144 px), a video clip, an embed iframe, a standalone HTML file, or the runnable p5.js / three.js / GLSL code with your settings built in.
+- Explore 120 example posters in a 3D universe or an index view.
+- "Surprise me" randomises a poster while keeping the settings you lock.
+- Every poster has a short share link that reproduces it exactly.
+
+## Facts
+
+- Price: free. Optional support via Gumroad.
+- Runs entirely in the browser; no account, nothing is uploaded. Photos and webcam stay on your device.
+- Built with p5.js, three.js, GLSL, React and Vite.
+- Audience: graphic designers, visual designers, creative coders, students.
+
+## Effects
+
+Pill Stream, Halftone Field, Pattern Collage, Orbit Glyphs, ASCII Lens, Particle Swirl, Liquid Blob, Ribbon Flow, Type in Space, Dot Terrain, Aura Gradient, Ink Bleed, Liquid Type, Reaction-Diffusion, Voronoi Glass, Bit Dither, Prism Light, Halo Blur, Line Sketch, Rect Split, Tile Mosaic, Contour Figure, Motif Mosaic, Iso City, Extrude Field, Cube Hive, Terrain Slab, Age Map, Strata, Heat Pulse, Cloud Screen, Ellipse Loom, Topiary, Code Columns, Bar Type, Glyph Field, Ring Type.
+
+## Links
+
+- [Make a poster](https://morva-studio.com/#rd/1984)
+- [Explore examples](https://morva-studio.com/#/explore)
+- [About](https://morva-studio.com/#/about)
