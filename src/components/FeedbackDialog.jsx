@@ -28,6 +28,7 @@ export default function FeedbackDialog() {
         {CONFIG.TALLY_FORM_ID ? (
           <iframe
             title="Feedback form"
+            referrerPolicy="strict-origin-when-cross-origin"
             src={`https://tally.so/embed/${CONFIG.TALLY_FORM_ID}?${params}`}
             className="h-[min(560px,70vh)] w-full rounded-md border-0"
             loading="lazy"

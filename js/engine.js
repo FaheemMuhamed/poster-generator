@@ -71,13 +71,31 @@ export function migrate(raw) {
   return raw;
 }
 
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 export function merge(base, extra) {
   if (!extra || typeof extra !== 'object') return base;
   const out = Array.isArray(base) ? [...base] : { ...base };
   for (const [k, v] of Object.entries(extra)) {
-    out[k] = v && typeof v === 'object' && !Array.isArray(v) && base[k] && typeof base[k] === 'object' ? merge(base[k], v) : v;
+    if (UNSAFE_KEYS.has(k)) continue;
+    const d = base[k];
+    // Settings can come from a link, so a value must keep the type of its default.
+    if (d != null && v != null && typeof d !== typeof v) continue;
+    out[k] = v && typeof v === 'object' && !Array.isArray(v) && d && typeof d === 'object' ? merge(d, v) : v;
   }
   return out;
+}
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+// Settings from a link or a pasted file end up in exported code and embeds, so the
+// values that are written there as-is must be what they claim to be.
+export function sanitize(state) {
+  state.seed = Number.isFinite(state.seed) ? Math.trunc(state.seed) : DEFAULT_STATE.seed;
+  if (!MODES.some((m) => m.id === state.mode)) state.mode = DEFAULT_STATE.mode;
+  const fallback = PALETTES[state.palette] || DEFAULT_STATE.colors;
+  state.colors = Object.fromEntries(Object.keys(DEFAULT_STATE.colors).map((k) => [k, HEX.test(state.colors?.[k]) ? state.colors[k] : fallback[k]]));
+  return state;
 }
 
 export const isLocal = () =>
@@ -99,7 +117,7 @@ function readHash(hash) {
 // `els`: { viewport, stage, scene, typeCanvas }. `notify(msg)` shows a toast. `embed`: poster only.
 export function createEngine({ els, notify = () => {}, embed = false }) {
   // Settings come from (in order): the link, a downloaded HTML file's baked-in settings, defaults.
-  const state = merge(structuredClone(DEFAULT_STATE), migrate(readHash(location.hash) || window.POSTER_STATE));
+  const state = sanitize(merge(structuredClone(DEFAULT_STATE), migrate(readHash(location.hash) || window.POSTER_STATE)));
   state.textHidden = false;
 
   // ---------- Change notifications for the UI ----------
@@ -420,7 +438,7 @@ export function createEngine({ els, notify = () => {}, embed = false }) {
       // Clearing `mode` too tells the UI there's nothing to show until the new mode loads.
       if (instance) { try { instance.dispose(); } catch (e) { console.warn(e); } instance = null; }
       mode = null;
-      const next = merge(structuredClone(DEFAULT_STATE), migrate(structuredClone(settings)));
+      const next = sanitize(merge(structuredClone(DEFAULT_STATE), migrate(structuredClone(settings))));
       for (const k of Object.keys(state)) if (!(k in next)) delete state[k];
       // The ambient-glow switch is the viewer's preference, not part of a poster.
       Object.assign(state, next, { textHidden: false, ui: state.ui });
@@ -522,7 +540,7 @@ export function createEngine({ els, notify = () => {}, embed = false }) {
       catch { text = window.prompt('Paste settings JSON:'); }
       if (!text) return;
       try {
-        const loaded = merge(structuredClone(DEFAULT_STATE), JSON.parse(text));
+        const loaded = sanitize(merge(structuredClone(DEFAULT_STATE), JSON.parse(text)));
         location.hash = encodeState(loaded);
         location.reload();
       } catch { notify("That doesn't look like settings JSON"); }

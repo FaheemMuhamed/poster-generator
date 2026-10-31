@@ -32,6 +32,7 @@ const LONG_VALUES = Object.fromEntries(Object.entries(SHORT_VALUES).map(([k, m])
 const get = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
 function set(obj, path, v) {
   const keys = path.split('.');
+  if (keys.some((k) => k === '__proto__' || k === 'constructor' || k === 'prototype')) return;
   let o = obj;
   for (const k of keys.slice(0, -1)) o = o[k] ??= {};
   o[keys.at(-1)] = v;
@@ -72,7 +73,7 @@ export function encodeShort(state, modeDef, defaults) {
     if (v !== undefined && v !== def.value && !(typeof v === 'number' && Number(v.toPrecision(4)) === def.value)) q.append(PARAM_PREFIX + k, writeValue(v));
   }
   const qs = q.toString();
-  return `${state.mode}/${state.seed}${qs ? '?' + qs : ''}`;
+  return `${encodeURIComponent(state.mode)}/${Math.trunc(Number(state.seed)) || 0}${qs ? '?' + qs : ''}`;
 }
 
 export const isShortHash = (hash) => /^#?[a-z0-9-]+\/\d+(\?|$)/i.test(hash);
