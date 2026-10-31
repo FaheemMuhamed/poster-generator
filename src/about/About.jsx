@@ -62,7 +62,7 @@ export default function About({ onOpenMode, onExplore }) {
             </p>
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => onOpenMode(HERO)} className="gap-1.5">Start making <ArrowRight className="size-4" /></Button>
-              <Button variant="outline" onClick={onExplore}>Explore 120 examples</Button>
+              <Button variant="outline" onClick={onExplore}>Explore 106 examples</Button>
             </div>
           </div>
 

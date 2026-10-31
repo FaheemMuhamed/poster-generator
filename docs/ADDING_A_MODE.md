@@ -85,9 +85,9 @@ Add `code(values, colors, seed)` to the default export. It returns a small runna
   ```js
   code: (values, colors, seed) => shaderSketch({ id: 'aura', name: 'Aura Gradient', params, values, colors, seed, fragment }),
   ```
-- **p5.js:** write a plain global-mode sketch (`setup` / `draw`) as a string. It can read `params`, `colors` and `SEED`. See `js/modes/p5/halftone.js`.
+- **p5.js:** write a plain global-mode sketch (`setup` / `draw`) as a string. It can read `params`, `colors` and `SEED`. See `js/modes/p5/peaklines.js`.
   ```js
-  code: (values, colors, seed) => p5Sketch({ id: 'halftone', name: 'Halftone Field', values, colors, seed, sketch: SKETCH }),
+  code: (values, colors, seed) => p5Sketch({ id: 'peaklines', name: 'Peak Lines', values, colors, seed, sketch: SKETCH }),
   ```
 - **three.js:** `threeSketch(...)` works the same way, with `THREE` already imported.
 
