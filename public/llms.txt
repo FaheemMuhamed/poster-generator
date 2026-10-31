@@ -11,7 +11,7 @@ Website: https://morva-studio.com/
 - Add a title and text in 53 open-licence typefaces with grid layouts, pick a palette or your own colours, and set the frame: A-series, 4:5, 9:16, 1:1, 16:9 or a custom ratio.
 - Use your own photo or webcam as the source for image-based effects.
 - Export a PNG up to 6K (6144 px), a video clip, an embed iframe, a standalone HTML file, or the runnable p5.js / three.js / GLSL code with your settings built in.
-- Explore 106 example posters in a 3D universe or an index view.
+- Explore 120 example posters in a 3D universe or an index view.
 - "Surprise me" randomises a poster while keeping the settings you lock.
 - Every poster has a short share link that reproduces it exactly.
 

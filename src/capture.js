@@ -161,7 +161,7 @@ const DARK = ['Night Petal'];
 const LIGHT_FINISHES = ['film', 'film', 'soft', 'halftone', 'coarse', 'dither', 'chroma', 'glitch', 'pixel', 'glow'];
 const DARK_FINISHES = ['glow', 'glow', 'bloomy', 'bloomy', 'chroma', 'film', 'soft', 'glitch'];
 // Effects that already are a print screen don't get another one on top.
-const SCREENED = new Set(['dither', 'halftone', 'cloudscreen', 'topiary', 'ascii', 'codecolumns']);
+const SCREENED = new Set(['dither', 'cloudscreen', 'topiary', 'ascii', 'codecolumns', 'pixelart', 'scanglow', 'bitglitch', 'dottype']);
 
 const COUNT = 120;
 
