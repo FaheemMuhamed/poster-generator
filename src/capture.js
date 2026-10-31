@@ -51,8 +51,8 @@ async function settle(settings, ms) {
 
 // ---------- Mode preview clips ----------
 const PREVIEW_PALETTE = {
-  pills: 'Chromatography', halftone: 'Halftone Ice', collage: 'Lilac Sky', orbit: 'Sunset Bloom', ascii: 'Ink Wash',
-  particles: 'Neuro Violet', blob: 'Neon Pulse', ribbons: 'Sunset Bloom', type3d: 'Lilac Sky', terrain: 'Night Petal',
+  pills: 'Chromatography', collage: 'Lilac Sky', orbit: 'Sunset Bloom', ascii: 'Ink Wash',
+  particles: 'Neuro Violet', blob: 'Neon Pulse', ribbons: 'Sunset Bloom', terrain: 'Night Petal',
   aura: 'Sunset Bloom', ink: 'Chromatography', liquidtype: 'Neon Pulse', rd: 'Halftone Ice', voronoi: 'Neuro Violet',
 };
 
@@ -215,7 +215,7 @@ async function renderExamples() {
   const list = [];
   for (let i = 0; i < COUNT; i++) {
     const { finish, ...s } = await makeExample(i, r);
-    await settle(s, s.mode === 'type3d' || s.mode === 'rd' ? 2200 : 1400);
+    await settle(s, s.mode === 'rd' ? 2200 : 1400);
     moveCursor(i * 0.7);
     await sleep(120);
     const w = $('stage').offsetWidth, h = $('stage').offsetHeight;

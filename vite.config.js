@@ -51,7 +51,7 @@ function contentSecurityPolicy() {
         `script-src 'self' ${hashes.join(' ')}`,
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
-        "connect-src 'self' https://cdn.jsdelivr.net", // three.js typefaces for Type in Space
+        "connect-src 'self'",
         "img-src 'self' data: blob:",
         "media-src 'self' blob:",
         "frame-src 'self' https://tally.so", // the About hero embed and the feedback form
