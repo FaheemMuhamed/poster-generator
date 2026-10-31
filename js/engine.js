@@ -3,7 +3,7 @@
 // subscribes to changes and calls the methods below.
 import { MODES, loadMode } from './modes/index.js';
 import { PALETTES } from './shared/palettes.js';
-import { drawType, loadFont } from './shared/typeLayer.js';
+import { drawType, loadFont, typeColors } from './shared/typeLayer.js';
 import { FX_DEFAULTS } from './shared/postfx.js';
 import {
   EXPORT_SIZES, exportPNG, copyPNG, startRecording, encodeState, decodeState,
@@ -221,7 +221,9 @@ export function createEngine({ els, notify = () => {}, embed = false }) {
     c.setTransform(size.dpr, 0, 0, size.dpr, 0, 0);
     // Modes that draw their own text still get the grid guides.
     const text = state.textHidden ? { ...state.text, show: false } : state.text;
-    drawType(c, size.w, size.h, text, state.colors, { showGrid: state.text.grid && !embed });
+    // Not saved in links (see settingsOf); exports read it from here.
+    state.darkGround = !!mode?.darkGround?.(state.params[mode.id] || {}, state.colors);
+    drawType(c, size.w, size.h, text, typeColors(state), { showGrid: state.text.grid && !embed });
   }
 
   // ---------- Image source (for image effects) ----------

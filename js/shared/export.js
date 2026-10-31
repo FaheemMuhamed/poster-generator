@@ -1,5 +1,5 @@
 // PNG export (any resolution), video recording, and shareable links.
-import { drawType } from './typeLayer.js';
+import { drawType, typeColors } from './typeLayer.js';
 
 export const BLEND_OPS = { Normal: 'source-over', Difference: 'difference', Multiply: 'multiply' };
 export const BLEND_CSS = { Normal: 'normal', Difference: 'difference', Multiply: 'multiply' };
@@ -31,7 +31,7 @@ export function composite(target, sceneCanvas, w, h, dpr, state) {
   if (!state.textHidden) {
     // Same blend as the live overlay's CSS mix-blend-mode.
     c.globalCompositeOperation = BLEND_OPS[state.text.blend] || 'source-over';
-    drawType(c, w, h, state.text, state.colors);
+    drawType(c, w, h, state.text, typeColors(state));
     c.globalCompositeOperation = 'source-over';
   }
   return target;
@@ -66,7 +66,7 @@ export async function copyPNG(opts) {
 
 // Settings without runtime-only fields.
 export function settingsOf(state) {
-  const { textHidden, ...rest } = state;
+  const { textHidden, darkGround, ...rest } = state;
   return rest;
 }
 

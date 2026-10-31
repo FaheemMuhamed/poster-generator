@@ -37,6 +37,8 @@ export default {
 
 Shader modes get every param as a GLSL uniform `p_<name>` for free, plus `uTime`, `uMouse`, `uPal[6]` and `paletteRamp()`. See `js/shared/fullscreenShader.js`.
 
+Effects with a dark ground add `darkGround: (params, colors) => true` (or a check on their own background param). The poster text then swaps ink and background colours, so the default text stays readable.
+
 **Rules that keep the library consistent:**
 - Colours always come from the palette (`ctx.palette` / `uPal`), so palettes and hover previews work.
 - Scale every mouse effect by `ctx.state.motion.mouse`.

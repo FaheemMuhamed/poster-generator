@@ -1,12 +1,12 @@
 # Morva
 
-> Morva is a free, browser-based archive of 37 generative visuals (p5.js, three.js and GLSL) that graphic and visual designers can tweak without code and export as posters, video clips or code.
+> Morva is a free, browser-based archive of 64 generative visuals (p5.js, three.js and GLSL) that graphic and visual designers can tweak without code and export as posters, video clips or code.
 
 Website: https://morva-studio.com/
 
 ## What it does
 
-- Each visual is a live generative-art technique: noise fields, particle systems, reaction–diffusion, dithering, halftone, Voronoi, kinetic and 3D type, isometric cities and more.
+- Each visual is a live generative-art technique: noise fields, particle systems, reaction–diffusion, dithering, halftone, Voronoi, metaballs, slit-scan and kinetic type, pixel art, isometric cities, maps and more.
 - Every visual has its own parameters (shape, form, motion), cursor and click interactions, three one-click looks, and a finish layer (grain, bloom, halftone, riso, glitch, pixel).
 - Add a title and text in 53 open-licence typefaces with grid layouts, pick a palette or your own colours, and set the frame: A-series, 4:5, 9:16, 1:1, 16:9 or a custom ratio.
 - Use your own photo or webcam as the source for image-based effects.
@@ -24,7 +24,7 @@ Website: https://morva-studio.com/
 
 ## Effects
 
-Pill Stream, Halftone Field, Pattern Collage, Orbit Glyphs, ASCII Lens, Particle Swirl, Liquid Blob, Ribbon Flow, Type in Space, Dot Terrain, Aura Gradient, Ink Bleed, Liquid Type, Reaction-Diffusion, Voronoi Glass, Bit Dither, Prism Light, Halo Blur, Line Sketch, Rect Split, Tile Mosaic, Contour Figure, Motif Mosaic, Iso City, Extrude Field, Cube Hive, Terrain Slab, Age Map, Strata, Heat Pulse, Cloud Screen, Ellipse Loom, Topiary, Code Columns, Bar Type, Glyph Field, Ring Type.
+Pill Stream, Halftone Field, Pattern Collage, Orbit Glyphs, ASCII Lens, Particle Swirl, Liquid Blob, Ribbon Flow, Type in Space, Dot Terrain, Aura Gradient, Ink Bleed, Liquid Type, Reaction-Diffusion, Voronoi Glass, Bit Dither, Prism Light, Halo Blur, Line Sketch, Rect Split, Tile Mosaic, Contour Figure, Motif Mosaic, Iso City, Extrude Field, Cube Hive, Terrain Slab, Age Map, Strata, Heat Pulse, Cloud Screen, Ellipse Loom, Topiary, Code Columns, Bar Type, Glyph Field, Ring Type, Fold Lines, Peak Lines, Night Map, Aerial Fields, Transit Board, Data Terrain, Ink Roots, Ring Matrix, Zigzag Maze, Thread Burst, Circle Bloom, Arc Panels, Goo, Warp Burst, Score Lines, Watercolour Trail, Fur, Redacted, Slit Type, Type Echo, Dot Type, Marble Type, Tracker HUD, Scan Glow, Cursor Crowd, Bit Glitch, Pixel Art.
 
 ## Links
 

@@ -504,6 +504,15 @@ const LAYOUT_FNS = {
   },
 };
 
+const luma = (hex) => { const n = parseInt(hex.slice(1), 16); return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255); };
+
+// Colours for the poster text. Effects with a dark ground (mode.darkGround) swap ink and
+// background, so the default ink text stays readable on them.
+export function typeColors(state) {
+  const c = state.colors;
+  return state.darkGround && luma(c.ink) < luma(c.bg) ? { ...c, ink: c.bg, bg: c.ink } : c;
+}
+
 // opts.showGrid draws the layout's grid as guides (used live, never in exports).
 export function drawType(ctx, w, h, text, palette, opts = {}) {
   const layout = LAYOUT_FNS[text.layout] || LAYOUT_FNS.Corners;
