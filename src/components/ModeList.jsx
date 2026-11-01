@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight, History, Image, Search, Sparkles, Star, Type, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
-import { CATEGORIES, MODES, ALL_TAGS, previewUrl } from '../../js/modes/index.js';
+import { CATEGORIES, MODES, LOOKS, previewUrl } from '../../js/modes/index.js';
 import { useEngine } from '../useEngine.js';
 import { cn } from '@/lib/utils';
 
@@ -89,8 +89,8 @@ export default function ModeList() {
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return MODES.filter((m) =>
-      (!tag || m.tags.includes(tag)) &&
-      (!q || [m.name, m.description, m.technique, m.category, ...m.tags].join(' ').toLowerCase().includes(q)));
+      (!tag || m.looks.includes(tag)) &&
+      (!q || [m.name, m.description, m.technique, m.category, ...m.tags, ...m.looks].join(' ').toLowerCase().includes(q)));
   }, [query, tag]);
 
   // ↑/↓ move between effects in the list (and open them), like a file browser.
@@ -136,7 +136,7 @@ export default function ModeList() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search effects"
+            placeholder="Search by name or look"
             aria-label="Search effects"
             className="h-8 w-full rounded-md border border-border bg-muted/50 pl-8 pr-7 text-[12px] outline-none focus:border-foreground/40 focus:bg-card"
           />
@@ -147,7 +147,8 @@ export default function ModeList() {
           )}
         </div>
         <div className="flex flex-wrap gap-1">
-          {ALL_TAGS.slice(0, 10).map((t) => (
+          {/* Search by how it looks, not by technique (tags stay searchable in the box). */}
+          {LOOKS.map((t) => (
             <button
               key={t}
               onClick={() => setTag(tag === t ? null : t)}

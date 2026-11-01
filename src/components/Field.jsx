@@ -20,7 +20,40 @@ const same = (a, b) => (typeof a === 'number' && typeof b === 'number' ? Math.ab
 
 // Label row shared by every control: name, a dot when it differs from the default
 // (click it, or double-click the name, to reset), an optional lock, and the value.
-function FieldHead({ label, value, changed, onReset, locked, onLock }) {
+// The number at the end of a slider row: click it to type an exact value.
+// Percent fields take 0–100; anything typed is clamped to the range and snapped to the step.
+function EditableValue({ value, display, min, max, step, unit, onChange }) {
+  const [draft, setDraft] = useState(null);
+  const percent = unit === '%' || (unit === undefined && min >= 0 && max <= 1 && max > 0);
+  const commit = () => {
+    let n = parseFloat(String(draft).replace(',', '.'));
+    setDraft(null);
+    if (!Number.isFinite(n)) return;
+    if (percent) n /= 100;
+    if (step) n = Math.round((n - min) / step) * step + min;
+    onChange(Math.min(max, Math.max(min, Number(n.toFixed(6)))));
+  };
+  if (draft !== null) {
+    return (
+      <input
+        autoFocus value={draft} aria-label="Exact value" inputMode="decimal"
+        onFocus={(e) => e.target.select()}
+        onChange={(e) => setDraft(e.target.value)} onBlur={commit}
+        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { setDraft(null); } }}
+        className="ml-auto h-5 w-16 rounded-[3px] bg-muted px-1 text-right font-mono text-[11px] tabular-nums text-foreground outline-none ring-1 ring-ring"
+      />
+    );
+  }
+  const shown = percent ? Math.round(value * 100) : Number(value.toFixed(step && step < 1 ? Math.min(3, Math.ceil(-Math.log10(step))) : 0));
+  return (
+    <button type="button" onClick={() => setDraft(String(shown))} title="Type an exact value"
+      className="ml-auto rounded-[3px] px-1 font-mono text-[11px] tabular-nums text-muted-foreground/80 hover:bg-muted hover:text-foreground">
+      {display}
+    </button>
+  );
+}
+
+function FieldHead({ label, value, changed, onReset, locked, onLock, editor }) {
   return (
     <div className="group/field flex min-h-5 items-center gap-1.5">
       <Label className="truncate text-[12px] font-normal text-muted-foreground" onDoubleClick={changed ? onReset : undefined} title={changed ? 'Double-click to reset' : undefined}>
@@ -40,7 +73,7 @@ function FieldHead({ label, value, changed, onReset, locked, onLock }) {
           {locked ? <Lock className="size-3" /> : <LockOpen className="size-3" />}
         </button>
       )}
-      {value !== undefined && <span className="ml-auto font-mono text-[11px] tabular-nums text-muted-foreground/80">{value}</span>}
+      {editor || (value !== undefined && <span className="ml-auto font-mono text-[11px] tabular-nums text-muted-foreground/80">{value}</span>)}
     </div>
   );
 }
@@ -48,7 +81,8 @@ function FieldHead({ label, value, changed, onReset, locked, onLock }) {
 export function SliderField({ label, value, min, max, step, unit, onChange, def, onReset, locked, onLock }) {
   return (
     <div className="space-y-2 py-1.5">
-      <FieldHead label={label} value={fmt(value, { min, max, step, unit })} changed={def && !same(value, def.value)} onReset={onReset} locked={locked} onLock={onLock} />
+      <FieldHead label={label} changed={def && !same(value, def.value)} onReset={onReset} locked={locked} onLock={onLock}
+        editor={typeof value === 'number' && <EditableValue value={value} display={fmt(value, { min, max, step, unit })} min={min} max={max} step={step} unit={unit} onChange={onChange} />} />
       <Slider value={[value]} min={min} max={max} step={step ?? (max - min) / 100} onValueChange={([v]) => onChange(v)} onDoubleClick={onReset} />
     </div>
   );

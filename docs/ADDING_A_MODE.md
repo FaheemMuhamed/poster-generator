@@ -55,7 +55,8 @@ Add one entry to `js/modes/index.js`:
   load: () => import('./p5/my-mode.js'),
   description: 'One plain sentence about what you see.',
   technique: 'The generative technique, e.g. "Poisson-disc sampling + Delaunay mesh"',
-  tags: ['particles', 'noise'] },
+  tags: ['particles', 'noise'],
+  looks: ['glowing', 'dreamy'] }, // 2–3 from LOOKS: how it looks, for the sidebar's look chips
 ```
 
 `category` is what it makes and decides its sidebar group. Reuse existing tags where they fit; tags power the sidebar filters and Explore.

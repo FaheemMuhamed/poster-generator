@@ -1,4 +1,5 @@
-import { ALargeSmall, CaseLower, CaseSensitive, CaseUpper, ChevronRight, Dices, MoveHorizontal, MoveVertical, RotateCcw, Type, TypeOutline } from 'lucide-react';
+import { ALargeSmall, CaseLower, CaseSensitive, CaseUpper, ChevronRight, Dices, Layers, Move, MoveHorizontal, MoveVertical, Pipette, Plus, RotateCcw, Save, Trash2, Type, TypeOutline, X } from 'lucide-react';
+import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,9 @@ import LayoutPicker from './LayoutPicker.jsx';
 import { CodeButton } from './CodeTab.jsx';
 import SourcePicker from './SourcePicker.jsx';
 import { cn } from '@/lib/utils';
+import { LAYER_BLENDS, LAYER_MASKS, isTextMask } from '../../js/shared/layers.js';
 
+const LINE_KEYS_ALL = ['title', 'subtitle', 'date', 'venue', 'footer'];
 const COLOR_KEYS = [['bg', 'Background'], ['ink', 'Ink'], ['c1', 'Accent 1'], ['c2', 'Accent 2'], ['c3', 'Accent 3'], ['c4', 'Accent 4']];
 
 // One-click looks for 3D + shader modes. Each preset sets every effect.
@@ -112,8 +115,10 @@ function ShapeTab({ engine }) {
           <ParamList engine={engine} keys={s.keys} />
           {s.id === 'motion' && <SliderField label="Overall speed" value={state.motion.speed} min={0} max={3} step={0.01} unit="×" def={{ value: 1 }} onReset={() => engine.setMotion('speed', 1)} onChange={(v) => engine.setMotion('speed', v)} />}
           {s.id === 'interaction' && <SliderField label="Mouse strength" value={state.motion.mouse} min={0} max={3} step={0.01} unit="×" def={{ value: 1 }} onReset={() => engine.setMotion('mouse', 1)} onChange={(v) => engine.setMotion('mouse', v)} />}
+          {s.id === 'interaction' && <PinControl engine={engine} />}
         </Section>
       ))}
+      <LayerSection engine={engine} />
       <Section title="Variation" defaultOpen>
         <div className="flex items-center gap-2">
           <Input type="number" value={state.seed} min={0} max={99999} onChange={(e) => engine.setSeed(Number(e.target.value) || 0)} className="h-8 font-mono text-[12px]" aria-label="Variation number" />
@@ -127,12 +132,137 @@ function ShapeTab({ engine }) {
   );
 }
 
+// The pin holds the effect's hover reaction at one point, so it shows up in the poster.
+function PinControl({ engine }) {
+  const { pin } = engine.state;
+  return (
+    <div className="mt-1 rounded-md bg-muted/40 px-2.5 py-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[12px]">Pin the hover</span>
+        <Switch checked={pin.on} aria-label="Pin the hover" onCheckedChange={(on) => { engine.setPin({ on }); if (on) engine.setArranging(true); }} />
+      </div>
+      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+        {pin.on ? 'Drag the pin on the poster (Arrange) to place the effect’s reaction.' : 'Keeps the effect reacting at a point you choose, even in exports.'}
+      </p>
+    </div>
+  );
+}
+
+// A second effect on top, with blend, opacity and a simple mask.
+function LayerSection({ engine }) {
+  const { state } = engine;
+  const L = state.layer2;
+  const def = engine.layerMode;
+  const pick = (
+    <Select value={L?.mode || ''} onValueChange={(id) => engine.setLayerMode(id)}>
+      <SelectTrigger size="sm" className="h-8 w-full text-[12px]"><SelectValue placeholder="Add an effect on top…" /></SelectTrigger>
+      <SelectContent className="max-h-[320px]">
+        {MODES.map((m) => <SelectItem key={m.id} value={m.id} className="text-[12px]">{m.name} <span className="text-muted-foreground">· {m.category}</span></SelectItem>)}
+      </SelectContent>
+    </Select>
+  );
+  return (
+    <Section title="Layer" defaultOpen={!!L} aside={L && (
+      <button type="button" onClick={() => engine.removeLayer()} title="Remove the layer" aria-label="Remove the layer"
+        className="grid size-6 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><Trash2 className="size-3.5" /></button>
+    )}>
+      {!L && <p className="mb-2 text-[11px] leading-relaxed text-muted-foreground">Stack a second effect over this one, then blend and mask it.</p>}
+      {pick}
+      {L && (
+        <div className="mt-2">
+          <SelectField label="Blend" value={L.blend} options={Object.keys(LAYER_BLENDS)} onChange={(v) => engine.setLayer('blend', v)} />
+          <SliderField label="Opacity" value={L.opacity} min={0} max={1} step={0.01} onChange={(v) => engine.setLayer('opacity', v)} />
+          <SelectField label="Show it" value={L.mask} options={LAYER_MASKS.map((m) => ({ value: m, label: m === 'Full' ? 'Everywhere' : m }))} onChange={(v) => engine.setLayer('mask', v)} />
+          {L.mask !== 'Full' && !isTextMask(L.mask) && <SliderField label="Edge softness" value={L.soft} min={0} max={1} step={0.01} onChange={(v) => engine.setLayer('soft', v)} />}
+          {def && (
+            <details className="group mt-1.5">
+              <summary className="flex cursor-pointer list-none items-center gap-1 py-1 text-[12px] text-muted-foreground hover:text-foreground">
+                <ChevronRight className="size-3.5 transition-transform group-open:rotate-90" /> {def.name} settings
+                <button type="button" onClick={(e) => { e.preventDefault(); engine.shuffleLayer(); }} title="New variation of the layer" aria-label="New variation of the layer"
+                  className="ml-auto grid size-6 place-items-center rounded-md hover:bg-muted"><Dices className="size-3.5" /></button>
+              </summary>
+              {Object.keys(def.params || {}).map((k) => (
+                <ParamField key={k} def={def.params[k]} value={L.params[k]} onChange={(v) => engine.setLayerParam(k, v)} onReset={() => engine.resetLayerParams([k])} />
+              ))}
+            </details>
+          )}
+        </div>
+      )}
+    </Section>
+  );
+}
+
+// Palettes people save themselves, kept on this browser.
+const MY_PALETTES = 'morva-palettes';
+const readPalettes = () => { try { return JSON.parse(localStorage.getItem(MY_PALETTES)) || []; } catch { return []; } };
+const writePalettes = (list) => { try { localStorage.setItem(MY_PALETTES, JSON.stringify(list)); } catch {} };
+
+// One colour: swatch (system picker), exact hex, and an eyedropper where the browser has one.
+function ColourRow({ engine, k, label }) {
+  const value = engine.state.colors[k];
+  const [draft, setDraft] = useState(null);
+  const commit = () => {
+    const v = (draft ?? '').trim().replace(/^#?/, '#');
+    if (/^#[0-9a-f]{6}$/i.test(v)) engine.setColor(k, v.toLowerCase());
+    else if (/^#[0-9a-f]{3}$/i.test(v)) engine.setColor(k, ('#' + [...v.slice(1)].map((c) => c + c).join('')).toLowerCase());
+    setDraft(null);
+  };
+  const pickFromScreen = async () => {
+    try { const r = await new window.EyeDropper().open(); engine.setColor(k, r.sRGBHex.toLowerCase()); } catch { /* cancelled */ }
+  };
+  return (
+    <div className="flex items-center gap-2.5 rounded-md px-1 py-1 hover:bg-muted/50">
+      <label className="relative size-6 shrink-0 cursor-pointer overflow-hidden rounded-full ring-1 ring-foreground/10" style={{ background: value }} title={`Pick ${label}`}>
+        <input type="color" value={value} onChange={(e) => engine.setColor(k, e.target.value)} className="absolute inset-0 cursor-pointer opacity-0" aria-label={`${label} colour`} />
+      </label>
+      <span className="flex-1 text-[12px] text-muted-foreground">{label}</span>
+      <input
+        value={draft ?? value.toUpperCase()} spellCheck={false} aria-label={`${label} hex`}
+        onFocus={(e) => { setDraft(value.toUpperCase()); e.target.select(); }}
+        onChange={(e) => setDraft(e.target.value)} onBlur={commit}
+        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { setDraft(null); e.currentTarget.blur(); } }}
+        className="h-6 w-[74px] rounded-[3px] bg-transparent px-1 text-right font-mono text-[11px] uppercase text-muted-foreground outline-none hover:bg-muted focus:bg-muted focus:text-foreground"
+      />
+      {'EyeDropper' in window && (
+        <button type="button" onClick={pickFromScreen} title="Pick a colour from the screen" aria-label={`Pick ${label} from the screen`}
+          className="grid size-6 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><Pipette className="size-3.5" /></button>
+      )}
+    </div>
+  );
+}
+
 function ColourTab({ engine }) {
   const { state, mode } = engine;
   const effectKeys = controlPlan(mode).colour;
+  const [mine, setMine] = useState(readPalettes);
+  const savePalette = () => {
+    const name = `My palette ${mine.length + 1}`;
+    const next = [...mine, { name, colors: { ...state.colors } }];
+    setMine(next); writePalettes(next);
+    engine.setColors(name, state.colors);
+  };
+  const deletePalette = (i) => { const next = mine.filter((_, j) => j !== i); setMine(next); writePalettes(next); };
   return (
     <>
-      <Section title="Palette" collapsible={false}>
+      <Section title="Palette" collapsible={false} aside={
+        <button type="button" onClick={savePalette} title="Save these colours as a palette" className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground">
+          <Save className="size-3.5" /> Save
+        </button>
+      }>
+        {mine.length > 0 && (
+          <div className="mb-2 grid grid-cols-2 gap-2">
+            {mine.map((p, i) => (
+              <div key={i} className={cn('group relative overflow-hidden rounded-md border text-left transition', state.palette === p.name ? 'border-foreground ring-1 ring-foreground' : 'border-border hover:border-foreground/40')}>
+                <button type="button" className="block w-full text-left" onClick={() => engine.setColors(p.name, p.colors)}>
+                  <div className="flex h-7">{['bg', 'c1', 'c2', 'c3', 'c4', 'ink'].map((k) => <div key={k} className="flex-1" style={{ background: p.colors[k] }} />)}</div>
+                  <div className="px-2 py-1 text-[11px] text-muted-foreground">{p.name}</div>
+                </button>
+                <button type="button" onClick={() => deletePalette(i)} aria-label={`Delete ${p.name}`} title="Delete"
+                  className="absolute right-1 bottom-1 grid size-5 place-items-center rounded bg-background/80 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100"><X className="size-3" /></button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-2">
           {Object.entries(PALETTES).map(([name, p]) => (
             <button
@@ -153,17 +283,9 @@ function ColourTab({ engine }) {
           <ParamList engine={engine} keys={effectKeys} />
         </Section>
       )}
-      <Section title="Fine-tune colours">
-        <div className="space-y-1">
-          {COLOR_KEYS.map(([k, label]) => (
-            <label key={k} className="flex cursor-pointer items-center gap-3 rounded-md px-1 py-1 hover:bg-muted/50">
-              <span className="relative size-6 shrink-0 overflow-hidden rounded-full ring-1 ring-foreground/10" style={{ background: state.colors[k] }}>
-                <input type="color" value={state.colors[k]} onChange={(e) => engine.setColor(k, e.target.value)} className="absolute inset-0 cursor-pointer opacity-0" />
-              </span>
-              <span className="flex-1 text-[12px] text-muted-foreground">{label}</span>
-              <span className="font-mono text-[11px] uppercase text-muted-foreground/70">{state.colors[k]}</span>
-            </label>
-          ))}
+      <Section title="Exact colours" defaultOpen>
+        <div className="space-y-0.5">
+          {COLOR_KEYS.map(([k, label]) => <ColourRow key={k} engine={engine} k={k} label={label} />)}
         </div>
       </Section>
     </>
@@ -266,6 +388,17 @@ function TypeTab({ engine }) {
             <Swatches state={state} label="Background colour" value={t.blockColor || 'ink'} onChange={(k) => engine.setText('blockColor', k)} />
           </div>
         )}
+      </Section>
+
+      <Section title="Placement" defaultOpen>
+        <SliderField label="Clear behind text" value={t.clear} min={0} max={1} step={0.01} def={{ value: 0 }} onReset={() => engine.setText('clear', 0)} onChange={(v) => engine.setText('clear', v)} />
+        <p className="-mt-0.5 mb-2 text-[11px] leading-relaxed text-muted-foreground">Softens the artwork behind each line so the words read.</p>
+        <div className="flex gap-1.5">
+          <Button variant="outline" size="sm" className="h-8 flex-1 gap-1.5 text-[12px]" onClick={() => engine.setArranging(true)}><Move className="size-3.5" /> Move text</Button>
+          {(Object.keys(t.offsets).length > 0 || Object.keys(t.styles).length > 0) && (
+            <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-[12px] text-muted-foreground" onClick={() => { engine.resetTextPlacement(); LINE_KEYS_ALL.forEach((k) => engine.setTextStyle(k, null)); }}><RotateCcw className="size-3.5" /> Reset</Button>
+          )}
+        </div>
       </Section>
 
       <Section title="Layout" defaultOpen aside={

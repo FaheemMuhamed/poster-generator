@@ -93,7 +93,8 @@
 }
 
 /* The poster stage: scene + type canvases fill it exactly. */
-#stage > div > canvas, #type-layer { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; }
+#scene > canvas, #scene2 > canvas, #stage > div > canvas, #type-layer { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; }
+#scene, #scene2 { transform-origin: 50% 50%; }
 #type-layer { pointer-events: none; }
 
 /* Ambient glow: a tiny copy of the poster, blurred and spread behind it. */

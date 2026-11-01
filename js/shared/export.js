@@ -1,5 +1,6 @@
 // PNG export (any resolution), video recording, and shareable links.
-import { drawType, typeColors } from './typeLayer.js';
+import { drawType, drawTextMask, typeColors } from './typeLayer.js';
+import { viewRect, applyMask, layerBlendOp, isTextMask, fillsTitle } from './layers.js';
 
 export const BLEND_OPS = { Normal: 'source-over', Difference: 'difference', Multiply: 'multiply' };
 export const BLEND_CSS = { Normal: 'normal', Difference: 'difference', Multiply: 'multiply' };
@@ -18,34 +19,58 @@ function stamp(state) {
   return `morva-${state.mode}-${state.seed}`;
 }
 
-// Draws the scene canvas + text layer into one 2D canvas.
-export function composite(target, sceneCanvas, w, h, dpr, state) {
+// Draws the poster into one 2D canvas: the artwork (at its pan/zoom), the second layer
+// (blend, opacity, mask), then the text. `scenes` is a canvas or { base, layer }.
+export function composite(target, scenes, w, h, dpr, state) {
+  const { base, layer } = scenes && !(scenes instanceof HTMLCanvasElement) ? scenes : { base: scenes };
   const W = Math.round(w * dpr), H = Math.round(h * dpr);
   if (target.width !== W || target.height !== H) { target.width = W; target.height = H; }
   const c = target.getContext('2d');
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.fillStyle = state.colors.bg;
   c.fillRect(0, 0, W, H);
-  if (sceneCanvas) c.drawImage(sceneCanvas, 0, 0, W, H);
+  const vr = viewRect(state.view, W, H);
+  if (base) c.drawImage(base, vr.x, vr.y, vr.w, vr.h);
+  const L = state.layer2;
+  if (layer && L) {
+    const tmp = document.createElement('canvas');
+    tmp.width = W; tmp.height = H;
+    const t = tmp.getContext('2d');
+    t.drawImage(layer, vr.x, vr.y, vr.w, vr.h);
+    let mask = null;
+    if (isTextMask(L.mask)) {
+      mask = document.createElement('canvas');
+      mask.width = W; mask.height = H;
+      const m = mask.getContext('2d');
+      m.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawTextMask(m, w, h, state.text);
+    }
+    applyMask(t, W, H, L, mask);
+    c.globalAlpha = L.opacity ?? 1;
+    c.globalCompositeOperation = layerBlendOp(L);
+    c.drawImage(tmp, 0, 0);
+    c.globalAlpha = 1;
+    c.globalCompositeOperation = 'source-over';
+  }
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   if (!state.textHidden) {
     // Same blend as the live overlay's CSS mix-blend-mode.
     c.globalCompositeOperation = BLEND_OPS[state.text.blend] || 'source-over';
-    drawType(c, w, h, state.text, typeColors(state));
+    drawType(c, w, h, state.text, typeColors(state), { skip: fillsTitle(state.layer2) ? 'title' : undefined });
     c.globalCompositeOperation = 'source-over';
   }
   return target;
 }
 
-// Re-renders the current mode at a higher pixel density, grabs it, then restores.
-export async function renderPNG({ instance, sceneCanvas, size, state, time, longEdge }) {
+// Re-renders the poster at a higher pixel density, grabs it, then restores.
+// `layer` (optional): the second layer's { instance, canvas() }.
+export async function renderPNG({ instance, sceneCanvas, size, state, time, longEdge, layer }) {
   const { w, h, dpr } = size;
   const d = longEdge ? longEdge / Math.max(w, h) : dpr;
-  instance.resize(w, h, d);
-  instance.frame(time, 0);
-  const canvas = composite(document.createElement('canvas'), sceneCanvas(), w, h, d, state);
-  instance.resize(w, h, dpr);
-  instance.frame(time, 0);
+  const all = [instance, layer?.instance].filter(Boolean);
+  all.forEach((i) => { i.resize(w, h, d); i.frame(time, 0); });
+  const canvas = composite(document.createElement('canvas'), { base: sceneCanvas(), layer: layer?.canvas() }, w, h, d, state);
+  all.forEach((i) => { i.resize(w, h, dpr); i.frame(time, 0); });
   const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
   return { blob, canvas };
 }
@@ -123,8 +148,8 @@ export function startRecording({ seconds, state, onDone }) {
   const started = performance.now();
   let primed = false;
   return {
-    tick(sceneCanvas, w, h, dpr) {
-      composite(canvas, sceneCanvas, w, h, dpr, state);
+    tick(scenes, w, h, dpr) {
+      composite(canvas, scenes, w, h, dpr, state);
       if (!primed) { rec.start(); primed = true; }
       if (performance.now() - started > seconds * 1000 && rec.state === 'recording') rec.stop();
     },

@@ -1,4 +1,6 @@
-import { Dices, Lamp, Moon, Pause, Play, Sun } from 'lucide-react';
+import { Dices, Grid3x3, Lamp, Moon, Move, Pause, Play, Redo2, Sun, Undo2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { GUIDES } from './ArrangeLayer.jsx';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import SupportDialog from './SupportDialog.jsx';
 import FeedbackDialog from './FeedbackDialog.jsx';
@@ -13,11 +15,11 @@ import Logo from './Logo.jsx';
 import SurpriseButton from './SurpriseButton.jsx';
 import { setTheme, useTheme } from '../useTheme.js';
 
-function IconButton({ label, shortcut, onClick, children }) {
+function IconButton({ label, shortcut, onClick, children, disabled, pressed }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button variant="ghost" size="icon" className="size-8" onClick={onClick}>{children}</Button>
+        <Button variant="ghost" size="icon" className={pressed ? 'size-8 bg-muted text-foreground' : 'size-8'} onClick={onClick} disabled={disabled} aria-pressed={pressed} aria-label={label}>{children}</Button>
       </TooltipTrigger>
       <TooltipContent>{label}{shortcut && <kbd className="ml-2 opacity-60">{shortcut}</kbd>}</TooltipContent>
     </Tooltip>
@@ -73,6 +75,26 @@ export default function TopBar({ view, onView }) {
             <RatioInput value={state.frame.h} onChange={(h) => engine.setFrame(state.frame.w, h)} label="Height" />
           </div>
         )}
+        <Separator orientation="vertical" className="mx-1 h-5!" />
+        <IconButton label="Undo" shortcut="⌘Z" onClick={() => engine.undo()} disabled={!engine.canUndo}><Undo2 /></IconButton>
+        <IconButton label="Redo" shortcut="⇧⌘Z" onClick={() => engine.redo()} disabled={!engine.canRedo}><Redo2 /></IconButton>
+        <IconButton label={engine.arranging ? 'Done arranging' : 'Arrange: move the artwork, text and pin'} shortcut="A" pressed={engine.arranging} onClick={() => engine.setArranging(!engine.arranging)}><Move /></IconButton>
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className={engine.guides !== 'None' ? 'size-8 bg-muted text-foreground' : 'size-8'} aria-label="Guides"><Grid3x3 /></Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Guides</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="center" className="w-44">
+            <DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">Guides (never exported)</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={engine.guides} onValueChange={(g) => engine.setGuides(g)}>
+              {GUIDES.map((g) => <DropdownMenuRadioItem key={g} value={g} className="text-[12px]">{g}</DropdownMenuRadioItem>)}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Separator orientation="vertical" className="mx-1 h-5!" />
         <IconButton label={state.motion.paused ? 'Play' : 'Pause'} shortcut="Space" onClick={() => engine.togglePause()}>
           {state.motion.paused ? <Play /> : <Pause />}

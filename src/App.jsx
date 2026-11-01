@@ -8,6 +8,7 @@ import TopBar from './components/TopBar.jsx';
 import ModeList from './components/ModeList.jsx';
 import Inspector from './components/Inspector.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import ArrangeLayer from './components/ArrangeLayer.jsx';
 
 // The Explore universe is only downloaded when first opened.
 const Explore = lazy(() => import('./explore/Explore.jsx'));
@@ -25,6 +26,7 @@ export default function App() {
   const viewportRef = useRef(null);
   const stageRef = useRef(null);
   const sceneRef = useRef(null);
+  const scene2Ref = useRef(null);
   const typeRef = useRef(null);
   const ambientRef = useRef(null);
   const [engine, setEngine] = useState(null);
@@ -35,7 +37,7 @@ export default function App() {
 
   useEffect(() => {
     const e = createEngine({
-      els: { viewport: viewportRef.current, stage: stageRef.current, scene: sceneRef.current, typeCanvas: typeRef.current, ambient: ambientRef.current },
+      els: { viewport: viewportRef.current, stage: stageRef.current, scene: sceneRef.current, scene2: scene2Ref.current, typeCanvas: typeRef.current, ambient: ambientRef.current },
       notify: (msg) => toast(msg),
       embed: EMBED,
     });
@@ -90,8 +92,18 @@ export default function App() {
   useEffect(() => {
     if (!engine || EMBED || view !== 'create') return;
     const onKey = (e) => {
+      const typing = e.target.closest('input, textarea, select, [contenteditable]');
+      // Undo / redo work everywhere except while typing (where the field's own undo applies).
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !typing) {
+        e.preventDefault();
+        if (e.shiftKey) engine.redo(); else engine.undo();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y' && !typing) { e.preventDefault(); engine.redo(); return; }
+      if (e.key === 'Escape' && engine.arranging) { engine.setArranging(false); return; }
       if (e.target.closest('input, textarea, select, [contenteditable], [role="slider"], [role="combobox"], [role="dialog"]') || e.metaKey || e.ctrlKey) return;
       const k = e.key.toLowerCase();
+      if (k === 'a') { engine.setArranging(!engine.arranging); return; }
       if (k === 'r') engine.randomise();
       else if (k === 's') engine.savePNG('4K (4096px)');
       else if (e.key === ' ') { engine.togglePause(); e.preventDefault(); }
@@ -107,8 +119,13 @@ export default function App() {
     <div ref={viewportRef} className="relative flex min-h-0 min-w-0 flex-1 items-center justify-center">
       <div ref={stageRef} id="stage" className={EMBED ? 'relative' : 'relative bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_60px_-20px_rgba(0,0,0,0.25)]'}>
         {!EMBED && <canvas ref={ambientRef} id="ambient" aria-hidden="true" />}
-        <div ref={sceneRef} id="scene" className="absolute inset-0 cursor-crosshair touch-none" />
+        {/* The artwork and its optional second layer, clipped to the frame so they can be panned and zoomed. */}
+        <div id="clip" className="absolute inset-0 overflow-hidden">
+          <div ref={sceneRef} id="scene" className="absolute inset-0 cursor-crosshair touch-none" />
+          <div ref={scene2Ref} id="scene2" className="pointer-events-none absolute inset-0" style={{ display: 'none' }} />
+        </div>
         <canvas ref={typeRef} id="type-layer" />
+        {!EMBED && engine && <EngineContext.Provider value={engine}><ArrangeLayer /></EngineContext.Provider>}
       </div>
     </div>
   );

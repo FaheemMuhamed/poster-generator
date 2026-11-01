@@ -119,14 +119,25 @@ function drawGrid(ctx, g, color) {
 
 // ---------- Text helpers ----------
 // Calls that pass a weight are captions (body face); calls without one are the title.
-function makeWriter(ctx, text, palette = {}) {
+// `info` (optional): { w, h, boxes, measure } collects where each line lands (for dragging
+// and clearing behind text); with `measure`, nothing is painted.
+function makeWriter(ctx, text, palette = {}, info = null) {
   const hasSpacing = 'letterSpacing' in ctx;
-  const set = (size, weight) => {
+  // `st`: this line's own style (text.styles[key]) overriding the shared title/body settings.
+  const set = (size, weight, st) => {
     const body = weight !== undefined;
-    ctx.font = body ? bodyCss(text, size) : fontCss(text, size);
-    if (hasSpacing) ctx.letterSpacing = `${((body ? text.bodyTracking : text.tracking) || 0) / 1000 * size}px`;
+    if (st?.font || st?.weight) {
+      const face = st.font || (body ? text.bodyFont || text.font : text.font);
+      ctx.font = faceCss(face, st.weight || (body ? text.bodyWeight ?? 400 : text.weight), size);
+    } else ctx.font = body ? bodyCss(text, size) : fontCss(text, size);
+    const tracking = st?.tracking ?? (body ? text.bodyTracking : text.tracking);
+    if (hasSpacing) ctx.letterSpacing = `${(tracking || 0) / 1000 * size}px`;
     return body;
   };
+  // Which of the five lines a string is (layouts pass the text itself; joined captions count as their first line).
+  const keyOf = (str) => LINE_KEYS.find((k) => text.lines[k] && text.lines[k] === str)
+    || LINE_KEYS.find((k) => text.lines[k] && String(str).startsWith(text.lines[k]));
+  const base = info ? ctx.getTransform() : null;
   const split = (s) => applyCase(String(s || ''), text.textCase).split('\\n');
   const outline = text.titleStyle === 'Outline';
   // Optional solid shape behind each line ('Block' or 'Pill'). The text switches to the
@@ -150,6 +161,7 @@ function makeWriter(ctx, text, palette = {}) {
     return inked;
   };
   const paint = (str, x, y, size, body) => {
+    if (info?.measure) return;
     const restore = backdrop(str, x, y, size);
     if (restore) { draw(str, x, y, size, body); ctx.fillStyle = restore; return; }
     draw(str, x, y, size, body);
@@ -196,15 +208,41 @@ function makeWriter(ctx, text, palette = {}) {
     // Draws wrapped text in a box. valign: 'top' | 'bottom' | 'middle'. Returns height used.
     block(str, box, size, { align = 'left', valign = 'top', weight, leading = 1.08, wrapText = true } = {}) {
       if (!str) return 0;
-      const body = set(size, weight);
+      const key = keyOf(str);
+      const st = key ? text.styles?.[key] : null;
+      const off = key ? text.offsets?.[key] : null;
+      const sz = size * (st?.size || 1);
+      const body = set(sz, weight, st);
       const lines = wrapText ? wrap(str, box.w) : split(str);
-      const lh = size * leading * (text.leading || 1);
+      const lh = sz * leading * (text.leading || 1);
+      // The layout's space is kept at the shared size, so other lines don't move.
       const total = lines.length * lh;
       let y = valign === 'bottom' ? box.y + box.h - total : valign === 'middle' ? box.y + (box.h - total) / 2 : box.y;
       const x = align === 'right' ? box.x + box.w : align === 'center' ? box.x + box.w / 2 : box.x;
+      ctx.save();
+      // A dragged line moves in page space, even inside rotated layouts.
+      if (off && (off.x || off.y) && info) {
+        const m = ctx.getTransform();
+        ctx.setTransform(new DOMMatrix().translateSelf(off.x * info.w * base.a, off.y * info.h * base.d).multiplySelf(m));
+      }
+      if (st?.color && palette[st.color]) ctx.fillStyle = palette[st.color];
       ctx.textAlign = align;
       ctx.textBaseline = 'top';
-      for (const ln of lines) { paint(ln, x, y + size * 0.02, size, body); y += lh; }
+      if (info && key) {
+        // The block's box, mapped back to page coordinates.
+        const widths = lines.map((ln) => ctx.measureText(ln).width);
+        const bw = Math.max(0, ...widths);
+        const left = align === 'right' ? x - bw : align === 'center' ? x - bw / 2 : x;
+        const m = ctx.getTransform();
+        const pts = [[left, y], [left + bw, y], [left, y + total], [left + bw, y + total]]
+          .map(([px, py]) => new DOMPoint(px, py).matrixTransform(m)).map((p) => [p.x / base.a, p.y / base.d]);
+        const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+        info.boxes.push({ key, x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys), size: sz });
+      }
+      // `only` paints just one line (a mask); `skip` leaves one out (filled by a layer instead).
+      const hidden = info && ((info.only && key !== info.only) || (info.skip && key === info.skip));
+      if (!hidden) for (const ln of lines) { paint(ln, x, y + sz * 0.02, sz, body); y += lh; }
+      ctx.restore();
       return total;
     },
     rule(x1, y1, x2, y2, weight = 1) {
@@ -513,16 +551,46 @@ export function typeColors(state) {
   return state.darkGround && luma(c.ink) < luma(c.bg) ? { ...c, ink: c.bg, bg: c.ink } : c;
 }
 
+// A soft patch of the background colour behind each line ("Clear behind text"):
+// a blurred shadow of a rectangle drawn off-canvas, so only its feathered shadow lands.
+function clearBehind(ctx, boxes, amount, color) {
+  const base = ctx.getTransform();
+  ctx.save();
+  ctx.setTransform(base);
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  const far = 20000;
+  for (let pass = 0; pass < (amount > 0.6 ? 2 : 1); pass++) {
+    for (const b of boxes) {
+      const pad = Math.max(4, b.size * (0.25 + amount * 0.5));
+      ctx.shadowBlur = pad * 1.4 * base.a;
+      ctx.shadowOffsetX = far * base.a;
+      ctx.globalAlpha = 0.35 + amount * 0.65;
+      ctx.fillRect(b.x - pad - far, b.y - pad * 0.6, b.w + pad * 2, b.h + pad * 1.2);
+    }
+  }
+  ctx.restore();
+}
+
 // opts.showGrid draws the layout's grid as guides (used live, never in exports).
+// Returns where each line was drawn: [{ key, x, y, w, h, size }] in page units.
 export function drawType(ctx, w, h, text, palette, opts = {}) {
   const layout = LAYOUT_FNS[text.layout] || LAYOUT_FNS.Corners;
   const k = text.size;
   const sizes = { m: w * 0.05, big: w * 0.085 * k, small: w * 0.026 * k };
+  const info = { w, h, boxes: [], measure: false, only: opts.only, skip: opts.skip };
   ctx.save();
   let g = null;
   if (text.show) {
+    if (text.clear > 0 && !opts.noClear) {
+      ctx.save();
+      layout(text.lines, makeWriter(ctx, text, palette, { ...info, boxes: info.boxes, measure: true }), w, h, sizes, ctx, text);
+      ctx.restore();
+      clearBehind(ctx, info.boxes.filter((b) => b.key !== opts.skip), text.clear, palette.bg);
+      info.boxes.length = 0;
+    }
     ctx.fillStyle = palette[text.color] || palette.ink;
-    g = layout(text.lines, makeWriter(ctx, text, palette), w, h, sizes, ctx, text);
+    g = layout(text.lines, makeWriter(ctx, text, palette, info), w, h, sizes, ctx, text);
   } else if (opts.showGrid) {
     // Still show the guides with text hidden, by laying out into an invisible pass.
     ctx.globalAlpha = 0;
@@ -531,4 +599,11 @@ export function drawType(ctx, w, h, text, palette, opts = {}) {
   }
   ctx.restore();
   if (opts.showGrid && g) drawGrid(ctx, g, palette.c1 || '#ff3d4e');
+  return info.boxes;
+}
+
+// The title alone as a black-on-transparent mask (for a layer masked to the title).
+export function drawTextMask(ctx, w, h, text) {
+  const black = { bg: '#000', ink: '#000', c1: '#000', c2: '#000', c3: '#000', c4: '#000' };
+  return drawType(ctx, w, h, { ...text, show: true, clear: 0, background: 'None', titleStyle: 'Fill', styles: Object.fromEntries(Object.entries(text.styles || {}).map(([k, v]) => [k, { ...v, color: undefined }])) }, black, { only: 'title' });
 }
